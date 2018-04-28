@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<script src="//cdn.bootcss.com/pace/1.0.2/pace.min.js"></script>
+<link href="//cdn.bootcss.com/pace/1.0.2/themes/pink/pace-theme-flash.css" rel="stylesheet">
+<style>
+    .pace .pace-progress {
+        background: #1E92FB; /*进度条颜色*/
+        height: 3px;
+    }
+    .pace .pace-progress-inner {
+         box-shadow: 0 0 10px #1E92FB, 0 0 5px     #1E92FB; /*阴影颜色*/
+    }
+    .pace .pace-activity {
+        border-top-color: #1E92FB;    /*上边框颜色*/
+        border-left-color: #1E92FB;    /*左边框颜色*/
+    }
+</style>
+
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="View,点击事件," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="​    在搜索了很多关于Android的点击事件传递的规则后，去查询了源码，对所梳理的点击事件传递规则做了一下整理，先得到的结论是先传递到Activity，然后是Window，最后是View，View继续将事件分发下去，这边我只探讨下是怎么传递到Activity，并一路传递下去的。">
+<meta name="keywords" content="View,点击事件">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Android中点击事件是怎么样传递到View的">
+<meta property="og:url" content="http://yoursite.com/2018/04/28/1/index.html">
+<meta property="og:site_name" content="luffy&#39;s Blog">
+<meta property="og:description" content="​    在搜索了很多关于Android的点击事件传递的规则后，去查询了源码，对所梳理的点击事件传递规则做了一下整理，先得到的结论是先传递到Activity，然后是Window，最后是View，View继续将事件分发下去，这边我只探讨下是怎么传递到Activity，并一路传递下去的。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2018-04-28T09:22:36.924Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Android中点击事件是怎么样传递到View的">
+<meta name="twitter:description" content="​    在搜索了很多关于Android的点击事件传递的规则后，去查询了源码，对所梳理的点击事件传递规则做了一下整理，先得到的结论是先传递到Activity，然后是Window，最后是View，View继续将事件分发下去，这边我只探讨下是怎么传递到Activity，并一路传递下去的。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/04/28/1/"/>
+
+
+
+
+
+  <title>Android中点击事件是怎么样传递到View的 | luffy's Blog</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">luffy's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/04/28/1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="luffy">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="https://avatars3.githubusercontent.com/u/38553575?s=460&v=4">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="luffy's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Android中点击事件是怎么样传递到View的</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-28T14:47:56+08:00">
+                2018-04-28
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Android/" itemprop="url" rel="index">
+                    <span itemprop="name">Android</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>​    在搜索了很多关于Android的点击事件传递的规则后，去查询了源码，对所梳理的点击事件传递规则做了一下整理，先得到的结论是先传递到Activity，然后是Window，最后是View，View继续将事件分发下去，这边我只探讨下是怎么传递到Activity，并一路传递下去的。</p>
+<a id="more"></a>
+<h2 id="查看调用栈"><a href="#查看调用栈" class="headerlink" title="查看调用栈"></a>查看调用栈</h2><p>首先分析之前，可以先把点击事件的传递的方法调用栈通过log的方式给打印出来。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyLinearLayout</span> <span class="keyword">extends</span> <span class="title">LinearLayout</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MyLinearLayout</span><span class="params">(Context context)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(context);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MyLinearLayout</span><span class="params">(Context context, @Nullable AttributeSet attrs)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(context, attrs);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MyLinearLayout</span><span class="params">(Context context, @Nullable AttributeSet attrs, </span></span></span><br><span class="line"><span class="function"><span class="params">                          <span class="keyword">int</span> defStyleAttr)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(context, attrs, defStyleAttr);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">dispatchTouchEvent</span><span class="params">(MotionEvent ev)</span> </span>&#123;</span><br><span class="line">        Log.d(<span class="string">"Luffyshu"</span>, <span class="string">"MyLinearLayout dispatchTouchEvent"</span>);</span><br><span class="line">        Thread.dumpStack();</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.dispatchTouchEvent(ev);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过 Thread.dumpStack()来打印，跑了一下代码，然后在屏幕上点击一下，打出的log如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">04-28 11:32:27.664 25022-25022/com.luffy.test D/Luffyshu: MyLinearLayout dispatchTouchEvent</span><br><span class="line">04-28 11:32:27.665 25022-25022/com.luffy.test W/System.err: java.lang.Exception: Stack trace</span><br><span class="line">        at java.lang.Thread.dumpStack(Thread.java:1376)</span><br><span class="line">        at com.luffy.test.MyLinearLayout.dispatchTouchEvent(MyLinearLayout.java:26)</span><br><span class="line">        at android.view.ViewGroup.dispatchTransformedTouchEvent(ViewGroup.java:2752)</span><br><span class="line">        at android.view.ViewGroup.dispatchTouchEvent(ViewGroup.java:2324)</span><br><span class="line">        at android.view.ViewGroup.dispatchTransformedTouchEvent(ViewGroup.java:2752)</span><br><span class="line">04-28 11:32:27.666 25022-25022/com.luffy.test W/System.err:     at android.view.ViewGroup.dispatchTouchEvent(ViewGroup.java:2324)</span><br><span class="line">        at android.view.ViewGroup.dispatchTransformedTouchEvent(ViewGroup.java:2752)</span><br><span class="line">        at android.view.ViewGroup.dispatchTouchEvent(ViewGroup.java:2324)</span><br><span class="line">        at android.view.ViewGroup.dispatchTransformedTouchEvent(ViewGroup.java:2752)</span><br><span class="line">        at android.view.ViewGroup.dispatchTouchEvent(ViewGroup.java:2324)</span><br><span class="line">        at android.view.ViewGroup.dispatchTransformedTouchEvent(ViewGroup.java:2752)</span><br><span class="line">        at android.view.ViewGroup.dispatchTouchEvent(ViewGroup.java:2324)</span><br><span class="line">        at android.view.ViewGroup.dispatchTransformedTouchEvent(ViewGroup.java:2752)</span><br><span class="line">        at android.view.ViewGroup.dispatchTouchEvent(ViewGroup.java:2324)</span><br><span class="line">        at com.android.internal.policy.DecorView.superDispatchTouchEvent(DecorView.java:439)</span><br><span class="line">        at com.android.internal.policy.PhoneWindow.superDispatchTouchEvent(PhoneWindow.java:1839)</span><br><span class="line">        at android.app.Activity.dispatchTouchEvent(Activity.java:3099)</span><br><span class="line">        at android.support.v7.view.WindowCallbackWrapper.dispatchTouchEvent(WindowCallbackWrapper.java:68)</span><br><span class="line">        at com.android.internal.policy.DecorView.dispatchTouchEvent(DecorView.java:399)</span><br><span class="line">        at android.view.View.dispatchPointerEvent(View.java:10454)</span><br><span class="line">        at android.view.ViewRootImpl$ViewPostImeInputStage.processPointerEvent(ViewRootImpl.java:5036)</span><br><span class="line">        at android.view.ViewRootImpl$ViewPostImeInputStage.onProcess(ViewRootImpl.java:4869)</span><br><span class="line">        at android.view.ViewRootImpl$InputStage.deliver(ViewRootImpl.java:4336)</span><br><span class="line">04-28 11:32:27.667 25022-25022/com.luffy.test W/System.err:     at android.view.ViewRootImpl$InputStage.onDeliverToNext(ViewRootImpl.java:4389)</span><br><span class="line">        at android.view.ViewRootImpl$InputStage.forward(ViewRootImpl.java:4355)</span><br><span class="line">        at android.view.ViewRootImpl$AsyncInputStage.forward(ViewRootImpl.java:4502)</span><br><span class="line">        at android.view.ViewRootImpl$InputStage.apply(ViewRootImpl.java:4363)</span><br><span class="line">        at android.view.ViewRootImpl$AsyncInputStage.apply(ViewRootImpl.java:4559)</span><br><span class="line">        at android.view.ViewRootImpl$InputStage.deliver(ViewRootImpl.java:4336)</span><br><span class="line">        at android.view.ViewRootImpl$InputStage.onDeliverToNext(ViewRootImpl.java:4389)</span><br><span class="line">        at android.view.ViewRootImpl$InputStage.forward(ViewRootImpl.java:4355)</span><br><span class="line">        at android.view.ViewRootImpl$InputStage.apply(ViewRootImpl.java:4363)</span><br><span class="line">        at android.view.ViewRootImpl$InputStage.deliver(ViewRootImpl.java:4336)</span><br><span class="line">        at android.view.ViewRootImpl.deliverInputEvent(ViewRootImpl.java:6983)</span><br><span class="line">        at android.view.ViewRootImpl.doProcessInputEvents(ViewRootImpl.java:6957)</span><br><span class="line">        at android.view.ViewRootImpl.enqueueInputEvent(ViewRootImpl.java:6900)</span><br><span class="line">        at =android.view.ViewRootImpl$WindowInputEventReceiver.onInputEvent(ViewRootImpl.java:7164)</span><br><span class="line">        at android.view.InputEventReceiver.dispatchInputEvent(InputEventReceiver.java:191)</span><br><span class="line">        at android.os.MessageQueue.nativePollOnce(Native Method)</span><br><span class="line">        at android.os.MessageQueue.next(MessageQueue.java:328)</span><br><span class="line">        at android.os.Looper.loop(Looper.java:148)</span><br><span class="line">04-28 11:32:27.668 25022-25022/com.luffy.test W/System.err:     at android.app.ActivityThread.main(ActivityThread.java:6451)</span><br><span class="line">        at java.lang.reflect.Method.invoke(Native Method)</span><br><span class="line">        at com.android.internal.os.ZygoteInit$MethodAndArgsCaller.run(ZygoteInit.java:1134)</span><br><span class="line">04-28 11:32:27.669 25022-25022/com.luffy.test W/System.err:     at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:995)</span><br></pre></td></tr></table></figure>
+<p>上面log主要从android.view.InputEventReceiver.dispatchInputEvent 开始往后看，Android系统Framework层开始收到native传递过来的包装好的点击事件，然后一路传递下去。</p>
+<h2 id="跟踪源码"><a href="#跟踪源码" class="headerlink" title="跟踪源码"></a>跟踪源码</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">InputEventReceiver</span> </span>&#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Called when an input event is received.</span></span><br><span class="line"><span class="comment">     * The recipient should process the input event and then call &#123;<span class="doctag">@link</span>#finishInputEvent&#125;</span></span><br><span class="line"><span class="comment">     * to indicate whether the event was handled.  No new input events will be received</span></span><br><span class="line"><span class="comment">     * until &#123;<span class="doctag">@link</span> #finishInputEvent&#125; is called.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> displayId The display id on which input event triggered.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> event The input event that was received.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onInputEvent</span><span class="params">(InputEvent event, <span class="keyword">int</span> displayId)</span> </span>&#123;</span><br><span class="line">        finishInputEvent(event, <span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// Called from native code.</span></span><br><span class="line">    <span class="meta">@SuppressWarnings</span>(<span class="string">"unused"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">dispatchInputEvent</span><span class="params">(<span class="keyword">int</span> seq, InputEvent event, <span class="keyword">int</span> displayId)</span> </span>&#123;</span><br><span class="line">        mSeqMap.put(event.getSequenceNumber(), seq);</span><br><span class="line">        onInputEvent(event, displayId);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先从InputEventReceiver开始，他是一个abstract类，这边dispatchInputEvent调用了onInputEvent，那么他的实现在哪里，结合上面的log来看，在ViewRootImpl有它的实现，ViewRootImpl在点击事件的传递过程中扮演了一个比较重要的角色，有关于他的分析，以后再仔细去了解下，我知道他是在Activity的onResume()中被创建出来的。</p>
+<p>简要的流程主要是在Activity的makeVisible()方法中</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">makeVisible</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!mWindowAdded) &#123;</span><br><span class="line">        ViewManager wm = getWindowManager();</span><br><span class="line">        wm.addView(mDecor, getWindow().getAttributes());</span><br><span class="line">        mWindowAdded = <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    mDecor.setVisibility(View.VISIBLE);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这边可以看到是通过ViewManager的addView添加，其实也就是WindowManagerGlobal的addView()方法，这个也是放到以后来探索，和本文无关</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addView</span><span class="params">(View view, ViewGroup.LayoutParams params,</span></span></span><br><span class="line"><span class="function"><span class="params">            Display display, Window parentWindow)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">     root = <span class="keyword">new</span> ViewRootImpl(view.getContext(), display);</span><br><span class="line"></span><br><span class="line">            view.setLayoutParams(wparams);</span><br><span class="line"></span><br><span class="line">            mViews.add(view);</span><br><span class="line">            mRoots.add(root);</span><br><span class="line">            mParams.add(wparams);</span><br><span class="line"></span><br><span class="line">            <span class="comment">// do this last because it fires off messages to start doing things</span></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                root.setView(view, wparams, panelParentView);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (RuntimeException e) &#123;</span><br><span class="line">                <span class="comment">// BadTokenException or InvalidDisplayException, clean up.</span></span><br><span class="line">                <span class="keyword">if</span> (index &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">                    removeViewLocked(index, <span class="keyword">true</span>);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">throw</span> e;</span><br><span class="line">            &#125;	</span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">    </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>主要代码逻辑在这里创建了ViewRootImpl，并且把传过来的view传给ViewRootImpl，这个view其实就是Activity的DecorView，接着开始看ViewRootImpl，之前有说他在里面实现了InputEventReceiver</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">WindowInputEventReceiver</span> <span class="keyword">extends</span> <span class="title">InputEventReceiver</span> </span>&#123;</span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="title">WindowInputEventReceiver</span><span class="params">(InputChannel inputChannel, Looper looper)</span> </span>&#123;</span><br><span class="line">          <span class="keyword">super</span>(inputChannel, looper);</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="meta">@Override</span></span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onInputEvent</span><span class="params">(InputEvent event, <span class="keyword">int</span> displayId)</span> </span>&#123;</span><br><span class="line">          enqueueInputEvent(event, <span class="keyword">this</span>, <span class="number">0</span>, <span class="keyword">true</span>);</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="meta">@Override</span></span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onBatchedInputEventPending</span><span class="params">()</span> </span>&#123;</span><br><span class="line">          <span class="keyword">if</span> (mUnbufferedInputDispatch) &#123;</span><br><span class="line">              <span class="keyword">super</span>.onBatchedInputEventPending();</span><br><span class="line">          &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">              scheduleConsumeBatchedInput();</span><br><span class="line">          &#125;</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="meta">@Override</span></span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">dispose</span><span class="params">()</span> </span>&#123;</span><br><span class="line">          unscheduleConsumeBatchedInput();</span><br><span class="line">          <span class="keyword">super</span>.dispose();</span><br><span class="line">      &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<p>很清楚的在实现的onInputEvent中调用了enqueueInputEvent()</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">enqueueInputEvent</span><span class="params">(InputEvent event,</span></span></span><br><span class="line"><span class="function"><span class="params">        InputEventReceiver receiver, <span class="keyword">int</span> flags, <span class="keyword">boolean</span> processImmediately)</span> </span>&#123;</span><br><span class="line">    adjustInputEventForCompatibility(event);</span><br><span class="line">    QueuedInputEvent q = obtainQueuedInputEvent(event, receiver, flags);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Always enqueue the input event in order, regardless of its time stamp.</span></span><br><span class="line">    <span class="comment">// We do this because the application or the IME may inject key events</span></span><br><span class="line">    <span class="comment">// in response to touch events and we want to ensure that the injected keys</span></span><br><span class="line">    <span class="comment">// are processed in the order they were received and we cannot trust that</span></span><br><span class="line">    <span class="comment">// the time stamp of injected events are monotonic.</span></span><br><span class="line">    QueuedInputEvent last = mPendingInputEventTail;</span><br><span class="line">    <span class="keyword">if</span> (last == <span class="keyword">null</span>) &#123;</span><br><span class="line">        mPendingInputEventHead = q;</span><br><span class="line">        mPendingInputEventTail = q;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        last.mNext = q;</span><br><span class="line">        mPendingInputEventTail = q;</span><br><span class="line">    &#125;</span><br><span class="line">    mPendingInputEventCount += <span class="number">1</span>;</span><br><span class="line">    Trace.traceCounter(Trace.TRACE_TAG_INPUT,mPendingInputEventQueueLengthCounterName,</span><br><span class="line">            mPendingInputEventCount);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (processImmediately) &#123;</span><br><span class="line">        doProcessInputEvents(); <span class="comment">//主要通过该方法</span></span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        scheduleProcessInputEvents(); <span class="comment">//延迟调用</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">scheduleProcessInputEvents</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!mProcessInputEventsScheduled) &#123;</span><br><span class="line">        mProcessInputEventsScheduled = <span class="keyword">true</span>;</span><br><span class="line">        Message msg = mHandler.obtainMessage(MSG_PROCESS_INPUT_EVENTS);</span><br><span class="line">        msg.setAsynchronous(<span class="keyword">true</span>);</span><br><span class="line">        mHandler.sendMessage(msg);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里主要是doProcessInputEvents和scheduleProcessInputEvents，后者是延迟调用，可以看到是通过了Handler来实现了延迟调用，最后还是会调用到doProcessInputEvents()，这部分代码就不贴了。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">doProcessInputEvents</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// Deliver all pending input events in the queue.</span></span><br><span class="line">    <span class="keyword">while</span> (mPendingInputEventHead != <span class="keyword">null</span>) &#123;</span><br><span class="line">        QueuedInputEvent q = mPendingInputEventHead;</span><br><span class="line">        mPendingInputEventHead = q.mNext;</span><br><span class="line">        <span class="keyword">if</span> (mPendingInputEventHead == <span class="keyword">null</span>) &#123;</span><br><span class="line">            mPendingInputEventTail = <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        q.mNext = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">        mPendingInputEventCount -= <span class="number">1</span>;</span><br><span class="line">        Trace.traceCounter(Trace.TRACE_TAG_INPUT,</span><br><span class="line">                           mPendingInputEventQueueLengthCounterName,</span><br><span class="line">                mPendingInputEventCount);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">long</span> eventTime = q.mEvent.getEventTimeNano();</span><br><span class="line">        <span class="keyword">long</span> oldestEventTime = eventTime;</span><br><span class="line">        <span class="keyword">if</span> (q.mEvent <span class="keyword">instanceof</span> MotionEvent) &#123;</span><br><span class="line">            MotionEvent me = (MotionEvent)q.mEvent;</span><br><span class="line">            <span class="keyword">if</span> (me.getHistorySize() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                oldestEventTime = me.getHistoricalEventTimeNano(<span class="number">0</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        mChoreographer.mFrameInfo.updateInputEventTime(eventTime, oldestEventTime);</span><br><span class="line"></span><br><span class="line">        deliverInputEvent(q);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// We are done processing all input events that we can process right now</span></span><br><span class="line">    <span class="comment">// so we can clear the pending flag immediately.</span></span><br><span class="line">    <span class="keyword">if</span> (mProcessInputEventsScheduled) &#123;</span><br><span class="line">        mProcessInputEventsScheduled = <span class="keyword">false</span>;</span><br><span class="line">        mHandler.removeMessages(MSG_PROCESS_INPUT_EVENTS);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">deliverInputEvent</span><span class="params">(QueuedInputEvent q)</span> </span>&#123;</span><br><span class="line">    Trace.asyncTraceBegin(Trace.TRACE_TAG_VIEW, <span class="string">"deliverInputEvent"</span>,</span><br><span class="line">            q.mEvent.getSequenceNumber());</span><br><span class="line">    <span class="keyword">if</span> (mInputEventConsistencyVerifier != <span class="keyword">null</span>) &#123;</span><br><span class="line">        mInputEventConsistencyVerifier.onInputEvent(q.mEvent, <span class="number">0</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    InputStage stage;</span><br><span class="line">    <span class="keyword">if</span> (q.shouldSendToSynthesizer()) &#123;</span><br><span class="line">        stage = mSyntheticInputStage;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        stage = q.shouldSkipIme() ? mFirstPostImeInputStage : mFirstInputStage;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (stage != <span class="keyword">null</span>) &#123;</span><br><span class="line">        stage.deliver(q);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        finishInputEvent(q);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在doProcessInputEvents()中，调用到了deliverInputEvent进行传递，这边可以看到有个InputStage，这是一个抽象类，实现了类似链表的功能，结合上面的调用栈也可以发现。和我们分析的点击事件相关的主要是ViewPostImeInputStage</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * Delivers post-ime input events to the view hierarchy.</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">ViewPostImeInputStage</span> <span class="keyword">extends</span> <span class="title">InputStage</span> </span>&#123;</span><br><span class="line">     <span class="function"><span class="keyword">public</span> <span class="title">ViewPostImeInputStage</span><span class="params">(InputStage next)</span> </span>&#123;</span><br><span class="line">         <span class="keyword">super</span>(next);</span><br><span class="line">     &#125;</span><br><span class="line">     </span><br><span class="line">     <span class="comment">//......</span></span><br><span class="line">     </span><br><span class="line">     <span class="meta">@Override</span></span><br><span class="line">     <span class="function"><span class="keyword">protected</span> <span class="keyword">int</span> <span class="title">onProcess</span><span class="params">(QueuedInputEvent q)</span> </span>&#123;</span><br><span class="line">         <span class="keyword">if</span> (q.mEvent <span class="keyword">instanceof</span> KeyEvent) &#123;</span><br><span class="line">             <span class="keyword">return</span> processKeyEvent(q);</span><br><span class="line">         &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">             <span class="keyword">final</span> <span class="keyword">int</span> source = q.mEvent.getSource();</span><br><span class="line">             <span class="keyword">if</span> ((source &amp; InputDevice.SOURCE_CLASS_POINTER) != <span class="number">0</span>) &#123;</span><br><span class="line">                 <span class="keyword">return</span> processPointerEvent(q);</span><br><span class="line">             &#125; <span class="keyword">else</span> <span class="keyword">if</span> ((source &amp; InputDevice.SOURCE_CLASS_TRACKBALL) != <span class="number">0</span>) &#123;</span><br><span class="line">                 <span class="keyword">return</span> processTrackballEvent(q);</span><br><span class="line">             &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                 <span class="keyword">return</span> processGenericMotionEvent(q);</span><br><span class="line">             &#125;</span><br><span class="line">         &#125;</span><br><span class="line">     &#125;</span><br><span class="line">     </span><br><span class="line">     <span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">processPointerEvent</span><span class="params">(QueuedInputEvent q)</span> </span>&#123;</span><br><span class="line">         <span class="keyword">final</span> MotionEvent event = (MotionEvent)q.mEvent;</span><br><span class="line"></span><br><span class="line">         mAttachInfo.mUnbufferedDispatchRequested = <span class="keyword">false</span>;</span><br><span class="line">         mAttachInfo.mHandlingPointerEvent = <span class="keyword">true</span>;</span><br><span class="line">         <span class="keyword">boolean</span> handled = mView.dispatchPointerEvent(event); <span class="comment">//直接调用DecorView</span></span><br><span class="line">         maybeUpdatePointerIcon(event);</span><br><span class="line">         maybeUpdateTooltip(event);</span><br><span class="line">         mAttachInfo.mHandlingPointerEvent = <span class="keyword">false</span>;</span><br><span class="line">         <span class="keyword">if</span> (mAttachInfo.mUnbufferedDispatchRequested &amp;&amp; !mUnbufferedInputDispatch) &#123;</span><br><span class="line">             mUnbufferedInputDispatch = <span class="keyword">true</span>;</span><br><span class="line">             <span class="keyword">if</span> (mConsumeBatchedInputScheduled) &#123;</span><br><span class="line">                 scheduleConsumeBatchedInputImmediately();</span><br><span class="line">             &#125;</span><br><span class="line">         &#125;</span><br><span class="line">         <span class="keyword">return</span> handled ? FINISH_HANDLED : FORWARD;</span><br><span class="line">     &#125;</span><br><span class="line">     </span><br><span class="line">     <span class="comment">//.......</span></span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>上面整个调用过程最后可以看到会调用到mView.dispatchPointerEvent(event);而这个mView之前分析过，是在ViewRootImpl的setView()中传递过来的就是Activity中的DecorView，也是个View</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@UiThread</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">View</span> <span class="keyword">implements</span> <span class="title">Drawable</span>.<span class="title">Callback</span>, <span class="title">KeyEvent</span>.<span class="title">Callback</span>,</span></span><br><span class="line"><span class="class">        <span class="title">AccessibilityEventSource</span> </span>&#123;</span><br><span class="line">            </span><br><span class="line">    <span class="comment">//......        </span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">dispatchPointerEvent</span><span class="params">(MotionEvent event)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (event.isTouchEvent()) &#123;</span><br><span class="line">            <span class="keyword">return</span> dispatchTouchEvent(event);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> dispatchGenericMotionEvent(event);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//......</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上面是View的dispatchPointerEvent，所以在processPointerEvent后会直接调用到这里，而DecorView是重写了</p>
+<p>这边的dispatchTouchEvent()方法，这里会直接调用到DecorView中</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DecorView</span> <span class="keyword">extends</span> <span class="title">FrameLayout</span> </span></span><br><span class="line"><span class="class">		<span class="keyword">implements</span> <span class="title">RootViewSurfaceTaker</span>,<span class="title">WindowCallbacks</span></span>&#123;</span><br><span class="line">	<span class="comment">//......</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">dispatchTouchEvent</span><span class="params">(MotionEvent ev)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> Window.Callback cb = mWindow.getCallback();</span><br><span class="line">        <span class="keyword">return</span> cb != <span class="keyword">null</span> &amp;&amp; !mWindow.isDestroyed() &amp;&amp; mFeatureId &lt; <span class="number">0</span></span><br><span class="line">                ? cb.dispatchTouchEvent(ev) : <span class="keyword">super</span>.dispatchTouchEvent(ev);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//......</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里的callback其实就是Activity，因为查看代码可以看到Activity实现了Window.Callback接口，所以这边mWindow.getCallback()返回的其实就是Activity，通过cb.dispatchTouchEvent(ev)就是调用了Activity的cb.dispatchTouchEvent()的方法，终于看到了点击事件一路传递到了Acitivty中</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Activity</span> <span class="keyword">extends</span> <span class="title">ContextThemeWrapper</span></span></span><br><span class="line"><span class="class">        <span class="keyword">implements</span> <span class="title">LayoutInflater</span>.<span class="title">Factory2</span>,</span></span><br><span class="line"><span class="class">        <span class="title">Window</span>.<span class="title">Callback</span>, <span class="title">KeyEvent</span>.<span class="title">Callback</span>,</span></span><br><span class="line"><span class="class">        <span class="title">OnCreateContextMenuListener</span>, <span class="title">ComponentCallbacks2</span>,</span></span><br><span class="line"><span class="class">        <span class="title">Window</span>.<span class="title">OnWindowDismissedCallback</span>, <span class="title">WindowControllerCallback</span>,</span></span><br><span class="line"><span class="class">		<span class="title">AutofillManager</span>.<span class="title">AutofillClient</span> </span>&#123;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//.......</span></span><br><span class="line">            </span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Called to process touch screen events.  You can override this to</span></span><br><span class="line"><span class="comment">     * intercept all touch screen events before they are dispatched to the</span></span><br><span class="line"><span class="comment">     * window.  Be sure to call this implementation for touch screen events</span></span><br><span class="line"><span class="comment">     * that should be handled normally.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> ev The touch screen event.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> boolean Return true if this event was consumed.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">dispatchTouchEvent</span><span class="params">(MotionEvent ev)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (ev.getAction() == MotionEvent.ACTION_DOWN) &#123;</span><br><span class="line">            onUserInteraction();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (getWindow().superDispatchTouchEvent(ev)) &#123; <span class="comment">//传递给Window</span></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> onTouchEvent(ev);</span><br><span class="line">    &#125; </span><br><span class="line">    </span><br><span class="line">    <span class="comment">//......</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Activity的dispatchTouchEvent()中又将事件传递给了Window，这里的getWindow()得到的其实也就是Activity中的PhoneWindow</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">PhoneWindow</span> <span class="keyword">extends</span> <span class="title">Window</span> <span class="keyword">implements</span> <span class="title">MenuBuilder</span>.<span class="title">Callback</span> </span>&#123;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//......</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">superDispatchTouchEvent</span><span class="params">(MotionEvent event)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> mDecor.superDispatchTouchEvent(event); <span class="comment">//回到DecorView中</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">//......</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后又会回到DecorView中，调用superDispatchTouchEvent()</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">superDispatchTouchEvent</span><span class="params">(MotionEvent event)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">super</span>.dispatchTouchEvent(event);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这是DecorView的实现，从这里看最后点击事件传递到了View中，接着再通过View根据View的事件分发规则分发下去。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>总的大致传递流程就是这样的，只是简单根据源码分析了一下，其中如果一些细节还是比较复杂的，自己也有部分不太理解，也没敢直接放上去，如果有错误的地方请帮我矫正下，谢谢。希望能通过自己跟踪源码更多的去了解这方面的知识，才能知其所以然。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/View/" rel="tag"># View</a>
+          
+            <a href="/tags/点击事件/" rel="tag"># 点击事件</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="https://avatars3.githubusercontent.com/u/38553575?s=460&v=4"
+                alt="luffy" />
+            
+              <p class="site-author-name" itemprop="name">luffy</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#查看调用栈"><span class="nav-number">1.</span> <span class="nav-text">查看调用栈</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#跟踪源码"><span class="nav-number">2.</span> <span class="nav-text">跟踪源码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">3.</span> <span class="nav-text">小结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">luffy</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
+<!-- 页面点击小红心 -->
+<script type="text/javascript" src="/js/src/love.js"></script>
+
